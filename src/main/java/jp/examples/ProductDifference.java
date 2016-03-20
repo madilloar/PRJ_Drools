@@ -4,17 +4,49 @@ import java.util.List;
 
 import jp.examples.utils.StringUtils;
 
+/**
+ * 製品差異を表現するクラス。
+ * 
+ * 旧製品、新製品、新旧製品差異理由、差異判定結果を状態として保持します。
+ *
+ */
 public class ProductDifference {
+  /**
+   * 製品ID。
+   */
   private String productId = null;
+  /**
+   * 旧製品。
+   */
   private Product beforeProduct = null;
+  /**
+   * 新製品。
+   */
   private Product afterProcduct = null;
+  /**
+   * 新旧製品差異理由。
+   */
   private List<Reason> differenceReasons = null;
+  /**
+   * 差異判定結果
+   */
   private String decision = null;
 
+  /**
+   * 引数無しコンストラクタは、不可視。
+   */
   @SuppressWarnings("unused")
   private ProductDifference() {
   }
 
+  /**
+   * コンストラクタ。
+   * 
+   * @param productId 製品ID。
+   * @param beforeProduct 旧製品。
+   * @param afterProduct 新製品。
+   * @param differenceReasons 差異理由。
+   */
   public ProductDifference(String productId, Product beforeProduct, Product afterProduct, List<Reason> differenceReasons) {
     this.setProductId(productId);
     this.setBeforeProduct(beforeProduct);
@@ -22,6 +54,10 @@ public class ProductDifference {
     this.setDifferenceReasons(differenceReasons);
   }
 
+  /**
+   * 文字列化します。
+   * JSON形式です。
+   */
   public String toString() {
     return StringUtils.toJson(this);
   }
