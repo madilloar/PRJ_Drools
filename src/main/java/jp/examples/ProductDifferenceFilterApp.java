@@ -1,25 +1,15 @@
 package jp.examples;
 
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
-import jp.examples.utils.StringUtils;
+import jp.examples.utils.DroolsUtils;
 
 import org.apache.log4j.Logger;
-import org.drools.decisiontable.InputType;
-import org.drools.decisiontable.SpreadsheetCompiler;
 import org.kie.api.KieServices;
-import org.kie.api.builder.KieBuilder;
-import org.kie.api.builder.KieFileSystem;
-import org.kie.api.builder.Message;
-import org.kie.api.builder.Results;
 import org.kie.api.logger.KieRuntimeLogger;
-import org.kie.api.runtime.KieContainer;
 import org.kie.api.runtime.KieSession;
 import org.kie.api.runtime.rule.FactHandle;
 
@@ -42,17 +32,12 @@ public class ProductDifferenceFilterApp {
   /**
    * ディシジョンテーブル名。
    */
-  private static final String DECISION_TABLE_NAME = "ProductDifferenceFilter1.xls";
+  private static final String DECISION_TABLE_NAME = "ProductDifferenceFilter1.xlsx";
 
   /**
    * ディシジョンテーブルへのファイルパス。
    */
   private static final File DECISION_TABLE_PAHT = new File("data/" + DECISION_TABLE_NAME);
-
-  /**
-   * デフォルトのディシジョンテーブルへのファイルパス。
-   */
-  private static final String DEFAULT_DECISION_TABLE_PAHT_STRING = "src/main/resources/" + DECISION_TABLE_NAME;
 
   /**
    * エントリーポイント。
@@ -64,113 +49,30 @@ public class ProductDifferenceFilterApp {
     ProductDifferenceFilterApp me = new ProductDifferenceFilterApp();
 
     // 製品群の差異を求める。
-    List<ProductDifference> products = me.diffProducts();
+    List<ProductDifference> problems = me.createProblems();
 
     // ルール実行前の状態
-    me.debugProductDifference(">>>BEFORE", products);
+    me.debugProductDifference(">>>BEFORE", problems);
 
     // ルール適用
     KieSession kieSession = null;
     KieRuntimeLogger kieRLogger = null;
     try {
       // ルールファイル(ディシジョンテーブルやDRL形式ルール)をエンジンに展開し、ルールとの接続(kieSession)を返す。
-      kieSession = me.createSession();
+      kieSession = DroolsUtils.createSession(DECISION_TABLE_PAHT, DECISION_TABLE_NAME);
       // エンジンのロガー生成
-      kieRLogger = KieServices.Factory.get().getLoggers().newFileLogger(kieSession, "log/ProductDifferenceFilter1");
+      kieRLogger = KieServices.Factory.get().getLoggers()
+          .newFileLogger(kieSession, "log/" + ProductDifferenceFilterApp.class.getSimpleName());
 
       // 製品群の差異をルールに適用
-      me.execute(kieSession, products);
+      me.execute(kieSession, problems);
     } finally {
       kieRLogger.close();
       kieSession.dispose();
     }
 
     // ルール実行結果の状態
-    me.debugProductDifference(">>>AFTER", products);
-  }
-
-  /**
-   * Droolsルールエンジンにディシジョンテーブルを与え、その接続を返す。
-   * 
-   * @return Droolsルールエンジンへの接続。
-   */
-  public KieSession createSession() {
-    // DEBUG:ディシジョンテーブルをDRL形式に変換してログ出力。
-    this.debugXlsToDrl(DECISION_TABLE_PAHT);
-
-    KieSession kieSession = null;
-
-    KieServices kieServices = KieServices.Factory.get();
-
-    // ルールエンジンのメモリファイルシステムの構築。
-    KieFileSystem kfs = kieServices.newKieFileSystem();
-
-    FileInputStream fis = null;
-    try {
-      fis = new FileInputStream(DECISION_TABLE_PAHT);
-
-      // writeの第一引数のパスは実際のファイルのパスではない。メモリ上の仮想的なパス。
-      // KieModuleを自前で作っていないので、デフォルトのパスで"src/main/resources/"で始まる。
-      // http://stackoverflow.com/questions/24558451/cant-run-hello-world-on-drools-dlr-files-are-not-picked-from-classpath-by-kie
-      kfs.write(DEFAULT_DECISION_TABLE_PAHT_STRING, kieServices.getResources().newInputStreamResource(fis));
-
-      // ルールエンジン内にルールを展開。
-      KieBuilder kieBuilder = kieServices.newKieBuilder(kfs).buildAll();
-
-      // ルール展開結果の取得。
-      Results results = kieBuilder.getResults();
-      // ルール展開結果にエラーがあったら、例外を返す。
-      if (results.hasMessages(Message.Level.ERROR)) {
-        this.logger_.debug(StringUtils.toJson(results));
-        throw new IllegalStateException(">>>ルールファイルの記述に問題があります。");
-      }
-
-      // ルールコンテナにルールを覚えさせます。
-      KieContainer kieContainer = kieServices.newKieContainer(kieServices.getRepository().getDefaultReleaseId());
-
-      // ルールエンジンへの接続を生成。
-      kieSession = kieContainer.newKieSession();
-
-    } catch (FileNotFoundException e) {
-      throw new RuntimeException(e);
-    } finally {
-      if (fis != null) {
-        try {
-          fis.close();
-        } catch (IOException e) {
-          throw new RuntimeException(e);
-        }
-      }
-    }
-    return kieSession;
-  }
-
-  /**
-   * ExcelディシジョンテーブルをDRL形式のテキストに変換し、デバッグ出力します。
-   * 
-   * ExcelディシジョンテーブルだとKieBuilderでルールを展開したときにエラーが発生したとき、
-   * エラー行番号がDRL形式の行番号なので、それを知るため。
-   * 
-   * @param path
-   *          Excelディシジョンテーブルパス。
-   */
-  private void debugXlsToDrl(File path) {
-    FileInputStream fis = null;
-    try {
-      fis = new FileInputStream(path);
-      SpreadsheetCompiler sc = new SpreadsheetCompiler();
-      this.logger_.debug(sc.compile(fis, InputType.XLS));
-    } catch (FileNotFoundException e) {
-      throw new RuntimeException(e);
-    } finally {
-      if (fis != null) {
-        try {
-          fis.close();
-        } catch (IOException e) {
-          throw new RuntimeException(e);
-        }
-      }
-    }
+    me.debugProductDifference(">>>AFTER", problems);
   }
 
   /**
@@ -220,7 +122,7 @@ public class ProductDifferenceFilterApp {
    * 
    * @return 製品群の差異
    */
-  private List<ProductDifference> diffProducts() {
+  private List<ProductDifference> createProblems() {
     List<ProductDifference> products = new ArrayList<ProductDifference>();
 
     String productId = "P01";
