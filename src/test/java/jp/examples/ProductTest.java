@@ -5,6 +5,8 @@ import static org.junit.Assert.assertEquals;
 import java.util.ArrayList;
 import java.util.List;
 
+import jp.examples.utils.StringUtils;
+
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -54,9 +56,20 @@ public class ProductTest {
     a.setDepth(30.5);
 
     List<Reason> r = new ArrayList<Reason>();
-    r.add(new Reason(productId, "Depth","奥行のサイズが異なります。"));
-    
+    r.add(new Reason(productId, "Depth", "奥行のサイズが異なります。"));
+
+    String exp = "{\"productId\":\"id02\",\"beforeProduct\":{\"productId\":\"id02\",\"height\":10.0,\"width\":20.0,\"depth\":30.0},\"afterProcduct\":{\"productId\":\"id02\",\"height\":10.0,\"width\":20.0,\"depth\":30.5},\"differenceReasons\":[{\"productId\":\"id02\",\"itemId\":\"Depth\",\"reasonId\":\"奥行のサイズが異なります。\"}],\"decision\":null}";
+
     ProductDifference pd = new ProductDifference(productId, b, a, r);
-    System.out.println(pd);
+    String act = pd.toString();
+
+    assertEquals(exp, act);
+  }
+
+  @Test
+  public void test03() {
+    String exp ="null";
+    String act =StringUtils.toJson(null);
+    assertEquals(exp, act);
   }
 }
