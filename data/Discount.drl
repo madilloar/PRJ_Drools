@@ -1,0 +1,14 @@
+package jp.examples;
+
+import jp.examples.DroolsSample.Sales;
+
+rule "Discount"
+    when
+        $s : Sales( status == Sales.NOT_APPLIED,
+                    $salesValue : sales >= 5000 )
+    then
+        $s.setSales( $salesValue - 500 );
+        $s.setStatus( Sales.APPLIED );
+        //update( $s );
+        System.out.println( $s.getSales() );
+end
