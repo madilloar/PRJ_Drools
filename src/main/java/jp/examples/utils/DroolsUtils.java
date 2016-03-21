@@ -25,8 +25,12 @@ public class DroolsUtils {
   /**
    * Droolsルールエンジンにディシジョンテーブルを与え、その接続を返す。
    * 
-   * ruleFileName: writeの第一引数のパスは実際のファイルのパスではない。メモリ上の仮想的なパス。
-   * KieModuleを自前で作っていないので、デフォルトのパスで"src/main/resources/"で始まる。
+   * ruleFileName:<br>
+   * KieFileSystem#write()の第一引数のパスは、ルールファイルが保管されているファイルパスではないので注意のこと。<br>
+   * ルールエンジンメモリのパスの模様(詳細理解してない)。DroolsはMavenでのJava標準ディレクトリ構造を前提としていう模様。<br>
+   * そして、"src/main/resources/META-INF/kmodule.xml"
+   * にルールエンジンの設定ファイルを記述しないでデフォルトの設定で<br>
+   * 接続する場合は、ルールファイルが"src/main/resources/"以下に格納されている前提となっている模様。<br>
    * 
    * @see <a href=
    *      "http://stackoverflow.com/questions/24558451/cant-run-hello-world-on-drools-dlr-files-are-not-picked-from-classpath-by-kie"
@@ -41,7 +45,7 @@ public class DroolsUtils {
    */
   public static KieSession createSession(File ruleFilePath, String ruleFileName) {
     // DEBUG:ディシジョンテーブルをDRL形式に変換してログ出力。
-    if(isXlsxFile(ruleFilePath)){
+    if (isXlsxFile(ruleFilePath)) {
       debugXlsxToDrl(ruleFilePath);
     }
 
@@ -55,7 +59,7 @@ public class DroolsUtils {
     FileInputStream fis = null;
     try {
       fis = new FileInputStream(ruleFilePath);
-
+      // ルールエンジンのメモリファイルシステム上のデフォルトパスは"src/main/resources/"
       kfs.write("src/main/resources/" + ruleFileName, kieServices.getResources().newInputStreamResource(fis));
 
       // ルールエンジン内にルールを展開。
@@ -117,6 +121,12 @@ public class DroolsUtils {
     }
   }
 
+  /**
+   * 引数のファイルがxlsxファイルか？
+   * 
+   * @param file ファイルオブジェクト
+   * @return true - xlsxファイル。false - それ以外。
+   */
   public static boolean isXlsxFile(File file) {
     return file.isFile() && file.canRead() && file.getPath().toLowerCase().endsWith(".xlsx");
   }
