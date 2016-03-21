@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
 
 import org.apache.log4j.Logger;
 import org.drools.decisiontable.InputType;
@@ -56,11 +57,15 @@ public class DroolsUtils {
     // ルールエンジンのメモリファイルシステムの構築。
     KieFileSystem kfs = kieServices.newKieFileSystem();
 
-    FileInputStream fis = null;
+    // ルールファイルを読み込むInputStream
+    InputStream is = null;
     try {
-      fis = new FileInputStream(ruleFilePath);
+      // ルールファイルのストリームを生成。
+      // DRL(Drools Rule Language)形式でもよいし、excelのディシジョンテーブル形式でもよい。
+      // drools-decisiontables.jarがクラスパスにないとexcelのディシジョンテーブルは読めません。
+      is = new FileInputStream(ruleFilePath);
       // ルールエンジンのメモリファイルシステム上のデフォルトパスは"src/main/resources/"
-      kfs.write("src/main/resources/" + ruleFileName, kieServices.getResources().newInputStreamResource(fis));
+      kfs.write("src/main/resources/" + ruleFileName, kieServices.getResources().newInputStreamResource(is));
 
       // ルールエンジン内にルールを展開。
       KieBuilder kieBuilder = kieServices.newKieBuilder(kfs).buildAll();
@@ -82,9 +87,9 @@ public class DroolsUtils {
     } catch (FileNotFoundException e) {
       throw new RuntimeException(e);
     } finally {
-      if (fis != null) {
+      if (is != null) {
         try {
-          fis.close();
+          is.close();
         } catch (IOException e) {
           throw new RuntimeException(e);
         }
